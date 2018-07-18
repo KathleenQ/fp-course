@@ -1,5 +1,6 @@
 module Anything where
 
+-- 18th Jul 2018 [1st Day]
 x :: Integer
 x = 99
 
@@ -73,4 +74,13 @@ addList = \w -> case w of
   Nil ->      0
   Cons h t -> h + addList t
 
+-- Some more review things:
+-- in `map` form ~
+mapOption :: (a -> b) -> Optional a -> Optional b
+map       :: (a -> b) -> List a -> List b
+?         :: (a -> b) -> ?    a -> ?    b
+(.)       :: (a -> b) -> (t -> a) -> (t -> b)
 
+m            :: (a -> b) -> Three a -> Three b
+flatMap      :: (a -> List b) -> List a -> List b
+bindOptional :: (a -> Optional b) -> Optional a -> Optional b

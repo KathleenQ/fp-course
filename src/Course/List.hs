@@ -423,6 +423,7 @@ notReverse ::
   -> List a
 notReverse =
   error "todo: Is it even possible?"
+-- Skip ~
 
 ---- End of list exercises
 
