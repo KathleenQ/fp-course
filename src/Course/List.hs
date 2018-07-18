@@ -259,8 +259,11 @@ flatMap ::
   (a -> List b)
   -> List a
   -> List b
-flatMap =
-  error "todo: Course.List#flatMap"
+flatMap f = flatten . (map f)
+{-
+flatMap f list =
+  foldRight ((++) . f) Nil
+-}
 
 -- | Flatten a list of lists to a list (again).
 -- HOWEVER, this time use the /flatMap/ function that you just wrote.
@@ -269,8 +272,12 @@ flatMap =
 flattenAgain ::
   List (List a)
   -> List a
-flattenAgain =
-  error "todo: Course.List#flattenAgain"
+flattenAgain = flatMap id
+-- [Hints: !
+--  flatten   = foldRight ((++) . id) Nil
+--  flatMap f = foldRight ((++) . f) Nil
+-- ]
+
 
 -- | Convert a list of optional values to an optional list of values.
 --
@@ -299,6 +306,7 @@ seqOptional ::
   -> Optional (List a)
 seqOptional =
   error "todo: Course.List#seqOptional"
+-- Just skip it!
 
 -- | Find the first element in the list matching the predicate.
 --
@@ -320,8 +328,17 @@ find ::
   (a -> Bool)
   -> List a
   -> Optional a
-find =
-  error "todo: Course.List#find"
+find _ Nil = Empty
+{-
+find f (h :. t)
+   | f h       = Full h
+   | otherwise = find f t
+-}
+find p (h :. t) =
+   bool (find p t) (Full h) (p h)
+-- find p list =
+--    foldRight (\h t -> bool t (Full h) (p h)) Empty list
+
 
 -- | Determine if the length of the given list is greater than 4.
 --
@@ -341,6 +358,7 @@ lengthGT4 ::
   -> Bool
 lengthGT4 =
   error "todo: Course.List#lengthGT4"
+-- Just skip it!
 
 -- | Reverse a list.
 --
@@ -356,8 +374,26 @@ lengthGT4 =
 reverse ::
   List a
   -> List a
-reverse =
-  error "todo: Course.List#reverse"
+{-
+reverse Nil = Nil
+reverse (h :. t) = (reverse t) ++ (h :. Nil)
+-}
+
+{-
+reverse = reverse0 Nil
+
+reverse0 :: List a -> List a -> List a
+reverse0 acc Nil = acc
+reverse0 acc (h:.t) = reverse0 (h:.acc) t
+-}
+
+-- var r = Nil
+-- for each (e1 in list) {
+--     r = f (r, e1)  --> make the `Cons`
+-- }
+-- return r
+reverse = foldLeft (flip (:.)) Nil
+
 
 -- | Produce an infinite `List` that seeds with the given value at its head,
 -- then runs the given function for subsequent elements
