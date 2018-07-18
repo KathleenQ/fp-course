@@ -53,6 +53,10 @@ infinity =
 foldRight :: (a -> b -> b) -> b -> List a -> b
 foldRight _ b Nil      = b
 foldRight f b (h :. t) = f h (foldRight f b t)
+--               list = a :. b :. c :. Nil
+-- foldRight f z list = a `f` (b `f` (c `f` z))
+--         (.) Nil
+
 
 foldLeft :: (b -> a -> b) -> b -> List a -> b
 foldLeft _ b Nil      = b
@@ -75,8 +79,8 @@ headOr ::
   a
   -> List a
   -> a
-headOr =
-  error "todo: Course.List#headOr"
+headOr x Nil = x
+headOr _ (h :. _) = h
 
 -- | The product of the elements of a list.
 --
@@ -91,8 +95,16 @@ headOr =
 product ::
   List Int
   -> Int
-product =
-  error "todo: Course.List#product"
+  {-
+  product Nil = 1
+  product (h :. t) = h * product t
+  -}
+-- h :: Int
+-- t :: List Int
+
+--   product list = foldLeft (\r el -> r * el) 1 list
+product list = foldLeft (*) 1 list
+
 
 -- | Sum the elements of the list.
 --
@@ -106,8 +118,8 @@ product =
 sum ::
   List Int
   -> Int
-sum =
-  error "todo: Course.List#sum"
+sum Nil = 0
+sum (h :. t) = h + product t
 
 -- | Return the length of the list.
 --
@@ -118,8 +130,14 @@ sum =
 length ::
   List a
   -> Int
-length =
-  error "todo: Course.List#length"
+-- length list = foldLeft (\r _ -> r + 1) 0 list
+length list = foldLeft (const . ((+) 1)) 0 list
+--                           \x -> f    (g    x)
+  {-
+length Nil = 0
+length (_ :. t) = 1 + length t
+  -}
+
 
 -- | Map the given function on each element of the list.
 --
@@ -133,8 +151,14 @@ map ::
   (a -> b)
   -> List a
   -> List b
-map =
-  error "todo: Course.List#map"
+-- map f list = foldRight (\h t -> f h :. t) Nil list
+-- map f list = foldRight (\h -> (:.) (f h)) Nil list
+map f = foldRight ((:.) . f) Nil
+{-
+map _ Nil = Nil
+map f (h :. l) = (f h) :. map f l
+-}
+
 
 -- | Return elements satisfying the given predicate.
 --
@@ -150,8 +174,27 @@ filter ::
   (a -> Bool)
   -> List a
   -> List a
-filter =
-  error "todo: Course.List#filter"
+filter _ Nil = Nil
+filter f (h :. lst)
+  | f h       = h :. filter f lst
+  | otherwise = filter f lst
+{-
+  filter p (h:.t) =
+    let something = filter p t
+    in if p h
+          then
+            h :. something
+          else
+            something
+-}
+
+{-
+filter p (h:.t) =
+  let i = filter p t
+  in bool id ((:.) h) (p h) i
+-}
+-- cannot use "foldLeft"~
+
 
 -- | Append two lists to a new list.
 --
@@ -169,8 +212,21 @@ filter =
   List a
   -> List a
   -> List a
-(++) =
-  error "todo: Course.List#(++)"
+{-
+(++) Nil lst = lst
+(++) (h :. t) lst = h :. (t ++ lst)
+-- do not need to use a pattern matching of "h" here ~
+-}
+
+{-
+(++) x y = foldRight (:.) y x
+-}
+(++) = \x y -> foldRight (:.) y x
+{-
+(++) = flip (foldRight (:.))
+-}
+-- flip :: (a -> b -> c) -> b -> a -> c
+
 
 infixr 5 ++
 
@@ -187,8 +243,7 @@ infixr 5 ++
 flatten ::
   List (List a)
   -> List a
-flatten =
-  error "todo: Course.List#flatten"
+flatten = foldRight (++) Nil
 
 -- | Map a function then flatten to a list.
 --
