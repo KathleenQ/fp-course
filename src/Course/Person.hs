@@ -20,3 +20,5 @@ data Person =
     Bool  -- smoker
     Chars -- phone number
   deriving (Eq, Show)
+
+-- Go brief about that ... [Used for "Parser", then go through that ...]

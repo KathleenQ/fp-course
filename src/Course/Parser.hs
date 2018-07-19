@@ -40,7 +40,8 @@ instance Show a => Show (ParseResult a) where
     stringconcat ["Unexpected string: ", show s]
   show (Result i a) =
     stringconcat ["Result >", hlist i, "< ", show a]
-  
+
+-- "ParseResult" is a Functor, rather than a Monad ~
 instance Functor ParseResult where
   _ <$> UnexpectedEof =
     UnexpectedEof
@@ -120,20 +121,41 @@ constantParser =
 character ::
   Parser Char
 character =
-  error "todo: Course.Parser#character"
+  P (\input -> case input of
+                 Nil  -> UnexpectedEof
+                 h:.t -> Result t h)
+-- Result :: Input -> a -> ParseResult a
+-- data ParseResult a = ... | Result Input a (-- Defined at src/Course/Parser.hs:29:5)
+
 
 -- | Parsers can map.
 -- Write a Functor instance for a @Parser@.
 --
 -- >>> parse (toUpper <$> character) "amz"
 -- Result >mz< 'A'
+
+-- (<$>) :: (a -> b) -> ParseResult a -> ParseResult b
+-- data Parser a = P (Input -> ParseResult a)
+
+-- very IMPORTANT & hard !!!
 instance Functor Parser where
   (<$>) ::
     (a -> b)
     -> Parser a
     -> Parser b
   (<$>) =
-     error "todo: Course.Parser (<$>)#instance Parser"
+--     \steve -> \kevin -> P (\jack -> (<$>) steve (parse kevin jack))
+    \steve -> \kevin -> P ((<$>) steve <$> parse kevin)
+
+-- (<$>) . (<$>) :: (Functor k2, Functor k1) => (a -> b) -> k1 (k2 a) -> k1 (k2 b)
+--
+-- HINTS:
+-- steve :: a -> b
+-- jack :: Input
+-- parse kevin :: Input -> ParseResult a
+-- parse kevin jack :: ParseResult a
+-- in "Functor", (<$>) :: (a -> b) -> ParseResult a -> ParseResult b
+
 
 -- | Return a parser that always succeeds with the given value and consumes no input.
 --
@@ -143,7 +165,10 @@ valueParser ::
   a
   -> Parser a
 valueParser =
-  error "todo: Course.Parser#valueParser"
+   \v -> P (\input -> Result input v)
+-- Using "Result" constructor !
+-- *** through type "_" in the corresponding position, we can know what type of thing do we need to have~ !!! Tips~~
+
 
 -- | Return a parser that tries the first parser for a successful value.
 --
@@ -167,11 +192,15 @@ valueParser =
   -> Parser a
   -> Parser a
 (|||) =
-  error "todo: Course.Parser#(|||)"
+  \p1 p2 -> P $ \input -> case parse p1 input of
+                             r@(Result _ _) -> r
+--                              Result input2 a -> Result input2 a
+                             _ -> parse p2 input
 
 infixl 3 |||
 
--- | Parsers can bind.
+
+-- | Parsers can bind !
 -- Return a parser that puts its input into the given parser and
 --
 --   * if that parser succeeds with a value (a), put that value into the given function
@@ -199,7 +228,20 @@ instance Monad Parser where
     -> Parser a
     -> Parser b
   (=<<) =
-    error "todo: Course.Parser (=<<)#instance Parser"
+    \a2pb pa -> P(parse (a2pb =<< pa))
+-- parse :: Parser a -> Input -> ParseResult a
+-- (=<<) :: (a -> k b) -> k a -> k b
+
+{-
+  \a2pb pa -> P(\input -> case parse pa input of
+                              UnexpectedEof -> UnexpectedEof
+                              ExpectedEof x -> ExpectedEof x
+                              UnexpectedChar c -> UnexpectedChar c
+                              UnexpectedString s -> UnexpectedString s
+                              Result input3 ay = parse (a2pb ay) input3
+                              )
+-}
+
 
 -- | Write an Applicative functor instance for a @Parser@.
 -- /Tip:/ Use @(=<<)@.
@@ -214,7 +256,20 @@ instance Applicative Parser where
     -> Parser a
     -> Parser b
   (<*>) =
-    error "todo: Course.Parser (<*>)#instance Parser"
+     \pf pa ->
+       pf >>= \f ->
+       pa >>= \ayyy ->
+       pure (f ayyy)
+-- TYPE Hints: !(analysis way...)
+-- (>>=) :: Parser x -> (x -> Parser y) -> Parser y
+-- (>>=) :: Parser (a -> b) -> ((a -> b) -> Parser b) -> Parser b
+-- (>>=) :: Parser a -> (a -> Parser b) -> Parser b
+
+
+
+-- ### English VS Haskell: and then -- >>=; always -- pure ; OR -- |||; 0 or many -- list; 1 or many -- list1;
+--                         is -- is; exactly m -- thisMany m; call it x -- \x ->; ...
+--
 
 -- | Return a parser that continues producing a list of values from the given parser.
 --
@@ -237,11 +292,13 @@ instance Applicative Parser where
 --
 -- >>> parse (list (character *> valueParser 'v')) ""
 -- Result >< ""
+
+-- ### (0 or many) p = (1 or many) p OR always Nil ==> Just Translate it into PROGRAMMING LANGUAGE !!!
 list ::
   Parser a
   -> Parser (List a)
-list =
-  error "todo: Course.Parser#list"
+list p = list1 p ||| pure Nil
+
 
 -- | Return a parser that produces at least one value from the given parser then
 -- continues producing a list of values from the given parser (to ultimately produce a non-empty list).
@@ -256,11 +313,38 @@ list =
 --
 -- >>> isErrorResult (parse (list1 (character *> valueParser 'v')) "")
 -- True
+
+-- ### (1 or many) p =
+--       p and-then, call it a
+--        (0 or many) p and-then, call it b
+--           always (a:.b)
 list1 ::
   Parser a
   -> Parser (List a)
-list1 =
-  error "todo: Course.Parser#list1"
+list1 p =
+  p >>= \a ->
+  list p >>= \b ->
+  pure (a:.b)
+
+{- STANDARD TO simplify the SYNTAX       ##### (important way for syntax~) !
+- insert the keyword do
+- turn >>= into <-
+- delete ->
+- delete \
+- swap each side of <-
+-}
+-- the Simplified form of list1~
+list11 p =
+  do
+    a <- p
+    b <- list p
+    pure (a:.b)
+
+list111 =
+   lift2 (:.) <*> (list p)
+-- \p -> lift2 (:.) p (list p)
+-- (<*>) :: Applicative f => f (a -> b) -> f a -> f b
+
 
 -- | Return a parser that produces a character but fails if
 --
