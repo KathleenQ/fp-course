@@ -143,6 +143,7 @@ instance Functor Parser where
     (a -> b)
     -> Parser a
     -> Parser b
+{-
   (<$>) =
 --     \steve -> \kevin -> P (\jack -> (<$>) steve (parse kevin jack))
     \steve -> \kevin -> P ((<$>) steve <$> parse kevin)
@@ -155,7 +156,8 @@ instance Functor Parser where
 -- parse kevin :: Input -> ParseResult a
 -- parse kevin jack :: ParseResult a
 -- in "Functor", (<$>) :: (a -> b) -> ParseResult a -> ParseResult b
-
+-}
+  (<$>) f q = P (\input -> f <$> parse q input)
 
 -- | Return a parser that always succeeds with the given value and consumes no input.
 --
@@ -191,11 +193,17 @@ valueParser =
   Parser a
   -> Parser a
   -> Parser a
+{-
 (|||) =
   \p1 p2 -> P $ \input -> case parse p1 input of
                              r@(Result _ _) -> r
 --                              Result input2 a -> Result input2 a
                              _ -> parse p2 input
+-}
+(|||) q r =
+  P (\input ->
+       let z = parse q input
+       in if isErrorResult z then parse r input else z)
 
 infixl 3 |||
 
@@ -241,6 +249,7 @@ instance Monad Parser where
                               Result input3 ay = parse (a2pb ay) input3
                               )
 -}
+-- Also can use "onResult" to write this function ~!
 
 
 -- | Write an Applicative functor instance for a @Parser@.
@@ -256,15 +265,14 @@ instance Applicative Parser where
     -> Parser a
     -> Parser b
   (<*>) =
-     \pf pa ->
-       pf >>= \f ->
-       pa >>= \ayyy ->
-       pure (f ayyy)
+     \f a ->
+       f >>= \f' ->
+       a >>= \a' ->
+       pure (f' a')
 -- TYPE Hints: !(analysis way...)
 -- (>>=) :: Parser x -> (x -> Parser y) -> Parser y
 -- (>>=) :: Parser (a -> b) -> ((a -> b) -> Parser b) -> Parser b
 -- (>>=) :: Parser a -> (a -> Parser b) -> Parser b
-
 
 
 -- ### English VS Haskell: and then -- >>=; always -- pure ; OR -- |||; 0 or many -- list; 1 or many -- list1;
@@ -322,11 +330,13 @@ list1 ::
   Parser a
   -> Parser (List a)
 list1 p =
-  p >>= \a ->
-  list p >>= \b ->
-  pure (a:.b)
+  p      >>= \q  ->
+  list p >>= \qs ->
+  pure (q:.qs)
+-- "pure" just uses to "Cons" things ~
 
 {- STANDARD TO simplify the SYNTAX       ##### (important way for syntax~) !
+- --> "do notation"
 - insert the keyword do
 - turn >>= into <-
 - delete ->
@@ -334,16 +344,30 @@ list1 p =
 - swap each side of <-
 -}
 -- the Simplified form of list1~
+list11 ::
+  Parser a
+  -> Parser (List a)
 list11 p =
-  do
-    a <- p
-    b <- list p
-    pure (a:.b)
+  do q  <- p
+     qs <- list p
+     pure (q:.qs)
 
-list111 =
-   lift2 (:.) <*> (list p)
--- \p -> lift2 (:.) p (list p)
+list111 ::
+  Parser a
+  -> Parser (List a)
+list111 p =
+-- lift2 (\q qs -> q:.qs) p (list p)
+  lift2 (:.) p (list p)
+
+-- \x -> f x (g x) [use pattern ~]
+-- \f                g          x  -> f x (g x)
+-- (a -> b -> c) -> (a -> b) -> a  -> c
+-- (f  (b -> c)) -> (f    b) -> (f    c)
+-- f <*> g
 -- (<*>) :: Applicative f => f (a -> b) -> f a -> f b
+{-
+list111 = lift2 (:.) <*> list
+-}
 
 
 -- | Return a parser that produces a character but fails if
