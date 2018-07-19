@@ -115,6 +115,8 @@ instance Monad ((->) t) where
   -> f b
 (<**>) =
   error "todo: Course.Monad#(<**>)"
+-- (<$>) :: Functor k => (a -> b) -> k a -> k b
+-- (=<<) :: Monad f => (a -> f b) -> f a -> f b
 -- Ignore ~
 
 infixl 4 <**>
@@ -174,6 +176,20 @@ infixl 1 >>=
   -> f c
 (<=<) b2fc a2fb a = (=<<) b2fc (a2fb a)
 -- ** Always check and think about whether the TYPE correspondence is correct !!!
+
+
+-- IMPORTANT !!! hard !!!
+(<<**>>) :: Monad k => k (a -> b) -> k a -> k b
+(<<**>>) k_a2b ka =
+   k_a2b >>= (\a2b ->
+   ka >>= (\a ->
+   pure (a2b a)))
+-- ** but ... actually, do not need any "()" above, just self add to make it easier to understand !
+-- TYPE Thinking:
+-- (>>=) :: k x -> (x -> k y) -> k y
+-- (>>=) :: k (a -> b) -> ((a -> b) -> k y) -> k y
+-- (>>=) :: k (a -> b) -> ((a -> b) -> k b) -> k b
+
 
 infixr 1 <=<
 

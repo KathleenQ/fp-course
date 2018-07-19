@@ -108,6 +108,7 @@ instance Applicative Optional where
          Empty  -> Empty
          Full e -> Full (f e)
   -}
+-- Can also list all "Empty" "Full" combination conditions ~!
 
 
 -- | Insert into a constant function.
