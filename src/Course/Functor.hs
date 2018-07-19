@@ -18,12 +18,12 @@ import qualified Prelude as P(fmap)
 --
 -- * The law of composition
 --   `∀f g x.(f . g <$> x) ≅ (f <$> (g <$> x))`
-class Functor f where
+class Functor k where
   -- Pronounced, eff-map.
   (<$>) ::
     (a -> b)
-    -> f a
-    -> f b
+    -> k a
+    -> k b
 
 infixl 4 <$>
 
@@ -43,6 +43,7 @@ instance Functor ExactlyOne where
     -> ExactlyOne b
   (<$>) =
     error "todo: Course.Functor (<$>)#instance ExactlyOne"
+-- Skip ~!
 
 -- | Maps a function on the List functor.
 --
@@ -56,8 +57,7 @@ instance Functor List where
     (a -> b)
     -> List a
     -> List b
-  (<$>) =
-    error "todo: Course.Functor (<$>)#instance List"
+  (<$>) = map
 
 -- | Maps a function on the Optional functor.
 --
@@ -71,8 +71,7 @@ instance Functor Optional where
     (a -> b)
     -> Optional a
     -> Optional b
-  (<$>) =
-    error "todo: Course.Functor (<$>)#instance Optional"
+  (<$>) = mapOptional
 
 -- | Maps a function on the reader ((->) t) functor.
 --
@@ -83,8 +82,7 @@ instance Functor ((->) t) where
     (a -> b)
     -> ((->) t a)
     -> ((->) t b)
-  (<$>) =
-    error "todo: Course.Functor (<$>)#((->) t)"
+  (<$>) a2b t2a = a2b . t2a
 
 -- | Anonymous map. Maps a constant value on a functor.
 --
@@ -94,13 +92,18 @@ instance Functor ((->) t) where
 -- prop> \x a b c -> x <$ (a :. b :. c :. Nil) == (x :. x :. x :. Nil)
 --
 -- prop> \x q -> x <$ Full q == Full x
+-- !!! IMPORTANT
 (<$) ::
   Functor f =>
   a
   -> f b
   -> f a
 (<$) =
-  error "todo: Course.Functor#(<$)"
+--   \a -> \kb -> (\b -> a) <$> kb
+--   \a -> \kb -> const a <$> kb
+--   \a -> (<$>) (const a)
+  (<$>) . const
+
 
 -- | Anonymous map producing unit value.
 --
@@ -119,8 +122,9 @@ void ::
   Functor f =>
   f a
   -> f ()
-void =
-  error "todo: Course.Functor#void"
+-- always ignore the value of a and substitute it as a UNIT !!!
+void fa =
+  (\_ -> ()) <$> fa
 
 -----------------------
 -- SUPPORT LIBRARIES --

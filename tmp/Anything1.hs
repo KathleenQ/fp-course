@@ -1,4 +1,4 @@
-module Anything where
+module Anything1 where
 
 -- 18th Jul 2018 [1st Day]
 x :: Integer
