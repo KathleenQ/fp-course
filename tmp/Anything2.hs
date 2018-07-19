@@ -51,3 +51,12 @@ instance ThingsThatMap ((->) t) where
 amapAnything :: ThingsThatMap k => b -> k a -> k b
 amapAnything b x = howtodomap (\_ -> b) x
 
+
+bindOptional :: (a -> Optional b) -> Optional a -> Optional b
+flatMap      :: (a -> List     b) -> List     a -> List     b
+bindReader   :: (a -> t ->     b) -> (t ->    a)-> (t ->    b)
+?            :: (a -> k        b) -> (k       a)-> (k       b)
+
+-- Then comes to "Monad" ...
+             :: Optional (a -> b) -> Optional a -> Optional b
+
