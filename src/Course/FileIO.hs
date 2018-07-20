@@ -13,6 +13,8 @@ import Course.List
 
 {-
 
+-- need to learn a new type: ":info IO"
+
 Useful Functions --
 
   getArgs :: IO (List Chars)
@@ -20,6 +22,7 @@ Useful Functions --
   readFile :: FilePath -> IO Chars
   lines :: Chars -> List Chars
   void :: IO a -> IO ()
+-- type FilePath = List Char       -- Defined at src/Course/List.hs:761:1
 
 Abstractions --
   Applicative, Monad:
@@ -85,46 +88,84 @@ printFile ::
   FilePath
   -> Chars
   -> IO ()
-printFile =
-  error "todo: Course.FileIO#printFile"
+printFile n c =
+   do putStrLn ("====== " ++ n ++ "\n" ++ c)
+-- IO is a Monad ~
+
 
 -- Given a list of (file name and file contents), print each.
 -- Use @printFile@.
 printFiles ::
   List (FilePath, Chars)
   -> IO ()
-printFiles =
-  error "todo: Course.FileIO#printFiles"
+printFiles list =
+   void (sequence ((\(name, contents) -> printFile name contents) <$> list))
+-- here, void: IO (List()) --> IO ();
+-- sequence :: Applicative k => List (k a) -> k (List a)
+
+-- uncurry :: (a -> b -> c) -> (a, b) -> c
+{-     to SIMPLIFY ~
+  void . sequence . (<$>) (uncurry printFile)
+-}
+
 
 -- Given a file name, return (file name and file contents).
 -- Use @readFile@.
 getFile ::
   FilePath
   -> IO (FilePath, Chars)
-getFile =
-  error "todo: Course.FileIO#getFile"
+getFile name = (<$>) (\c -> (name, c)) (readFile name)
+-- readFile :: FilePath -> IO Chars
+
+{-
+  lift2 (<$>) (,) readFile
+-}
+-- \x -> f (g x) (h x)
+-- lift2 f g h
+
 
 -- Given a list of file names, return list of (file name and file contents).
 -- Use @getFile@.
 getFiles ::
   List FilePath
   -> IO (List (FilePath, Chars))
-getFiles =
-  error "todo: Course.FileIO#getFiles"
+getFiles lst =
+--    sequence ((\name -> getFile name) <$> lst)
+   sequence ((<$>) getFile lst)
+{-
+  getFiles Nil = pure Nil
+  getFiles (h:.t) =
+      getFile h  >>= \pairOfStuff ->
+      getFiles t >>= \listOfPairOfStuff ->
+      pure (pairOfStuff :. listOfPairOfStuff)
+-}
+
 
 -- Given a file name, read it and for each line in that file, read and print contents of each.
 -- Use @getFiles@ and @printFiles@.
 run ::
   FilePath
   -> IO ()
-run =
-  error "todo: Course.FileIO#run"
+run name = readFile name         >>= \line ->
+           getFiles (lines line) >>= \file ->
+           printFiles file
+-- lines :: Chars -> List Chars
+
 
 -- /Tip:/ use @getArgs@ and @run@
+-- >>> :main
+-- pass in args
+
 main ::
   IO ()
 main =
-  error "todo: Course.FileIO#main"
+  do a <- getArgs
+     case a of
+       Nil  -> putStrLn "pass in args"
+       h:._ -> run h
+-- getArgs :: IO (List Chars)
+-- run :: FilePath -> IO ()
+
 
 ----
 
