@@ -386,8 +386,15 @@ list111 = lift2 (:.) <*> list
 satisfy ::
   (Char -> Bool)
   -> Parser Char
+-- need to use ">>=", order-changed input data types ~
 satisfy =
-  error "todo: Course.Parser#satisfy"
+--   \pred -> character >>= \c -> if pred c then pure c else unexpectedCharParser c
+--   \pred -> character >>= \c -> bool (unexpectedCharParser c) (pure c) (pred c)
+  \pred -> character >>=  lift3 bool unexpectedCharParser pure pred
+
+-- >>> lift3 bool (1:.2:.3:.Nil) (4:.5:.6:.Nil) (True:.False:.Nil)
+-- [4,1,5,1,6,1,4,2,5,2,6,2,4,3,5,3,6,3]
+
 
 -- | Return a parser that produces the given character but fails if
 --
@@ -398,8 +405,8 @@ satisfy =
 -- /Tip:/ Use the @satisfy@ function.
 is ::
   Char -> Parser Char
-is =
-  error "todo: Course.Parser#is"
+is _ =
+  satisfy (\_ -> True)
 
 -- | Return a parser that produces a character between '0' and '9' but fails if
 --
@@ -411,9 +418,8 @@ is =
 digit ::
   Parser Char
 digit =
-  error "todo: Course.Parser#digit"
+  satisfy isDigit
 
---
 -- | Return a parser that produces a space character but fails if
 --
 --   * The input is empty.
@@ -424,7 +430,7 @@ digit =
 space ::
   Parser Char
 space =
-  error "todo: Course.Parser#space"
+  satisfy isSpace
 
 -- | Return a parser that produces one or more space characters
 -- (consuming until the first non-space) but fails if
@@ -436,8 +442,8 @@ space =
 -- /Tip:/ Use the @list1@ and @space@ functions.
 spaces1 ::
   Parser Chars
-spaces1 =
-  error "todo: Course.Parser#spaces1"
+spaces1 = list1 space
+-- list1 :: Parser a -> Parser (List a)
 
 -- | Return a parser that produces a lower-case character but fails if
 --
@@ -449,7 +455,7 @@ spaces1 =
 lower ::
   Parser Char
 lower =
-  error "todo: Course.Parser#lower"
+  satisfy isLower
 
 -- | Return a parser that produces an upper-case character but fails if
 --
@@ -461,7 +467,7 @@ lower =
 upper ::
   Parser Char
 upper =
-  error "todo: Course.Parser#upper"
+  satisfy isUpper
 
 -- | Return a parser that produces an alpha character but fails if
 --
@@ -473,7 +479,7 @@ upper =
 alpha ::
   Parser Char
 alpha =
-  error "todo: Course.Parser#alpha"
+  satisfy isAlpha
 
 -- | Return a parser that sequences the given list of parsers by producing all their results
 -- but fails on the first failing parser of the list.
@@ -489,8 +495,9 @@ alpha =
 sequenceParser ::
   List (Parser a)
   -> Parser (List a)
-sequenceParser =
-  error "todo: Course.Parser#sequenceParser"
+sequenceParser Nil = pure Nil
+sequenceParser (h:.t) =
+  lift2 (:.) h (sequenceParser t)
 
 -- | Return a parser that produces the given number of values off the given parser.
 -- This parser fails if the given parser fails in the attempt to produce the given number of values.
@@ -506,8 +513,8 @@ thisMany ::
   Int
   -> Parser a
   -> Parser (List a)
-thisMany =
-  error "todo: Course.Parser#thisMany"
+thisMany n a =
+   sequenceParser (replicate n a)
 
 -- | This one is done for you.
 --
@@ -540,7 +547,25 @@ ageParser =
 firstNameParser ::
   Parser Chars
 firstNameParser =
-  error "todo: Course.Parser#firstNameParser"
+  (:.) <$> upper <*> list lower
+{-
+  upper      >>= \u ->
+  list lower >>= \v ->
+  pure (u:.v)
+-}
+  {- "pure English representation":
+--     upper and-then, call it u
+--     (0 or many) lower, call it v
+--     always (u:.v)
+  -}
+
+{-
+  do u <- upper
+     v <- list lower
+     pure (u:.v)
+-}
+
+
 
 -- | Write a parser for Person.surname.
 --
@@ -562,7 +587,18 @@ firstNameParser =
 surnameParser ::
   Parser Chars
 surnameParser =
-  error "todo: Course.Parser#surnameParser"
+  upper            >>= \u ->
+  thisMany 5 lower >>= \v ->
+  list lower       >>= \w ->
+  pure (u :. v ++ w)
+   {-
+--   upper and-then, call it u
+--   exactly 5 lower, call it v
+--   (0 or many) lower, call it w
+--   always (u :. v ++ w)
+   -}
+-- actually, it is just the process to find our needed/lost TYPE thing using "_" ~
+
 
 -- | Write a parser for Person.smoker.
 --
@@ -581,7 +617,13 @@ surnameParser =
 smokerParser ::
   Parser Bool
 smokerParser =
-  error "todo: Course.Parser#smokerParser"
+{-
+  ((\c -> True) <$> (is 'y')) ||| ((\c -> False) <$> (is 'n'))
+-}
+  (True <$ (is 'y')) ||| (False <$ (is 'n'))
+-- " (_ (is 'y')) ||| (_ (is 'n')) "  Hints: needs to transfer "Parse Char" to "Parse Bool"!
+-- (<$) :: Functor f => a -> f b -> f a
+
 
 -- | Write part of a parser for Person#phoneBody.
 -- This parser will only produce a string of digits, dots or hyphens.
@@ -603,7 +645,10 @@ smokerParser =
 phoneBodyParser ::
   Parser Chars
 phoneBodyParser =
-  error "todo: Course.Parser#phoneBodyParser"
+  list (digit ||| is '.' ||| is '-')
+-- ENGLISH: " (0 or many) (digit OR is '.' OR is '-') "
+-- list :: Parser a -> Parser (List a)
+
 
 -- | Write a parser for Person.phone.
 --
@@ -625,7 +670,27 @@ phoneBodyParser =
 phoneParser ::
   Parser Chars
 phoneParser =
-  error "todo: Course.Parser#phoneParser"
+    {- "pure ENGLISH:"
+    --   digit and-then, call it d
+    --   phoneBodyParser and-then, call it b
+    --   is '#' and_then, call it h
+    --   always (d :. b)
+    -}
+{-
+   digit           >>= \d ->
+   phoneBodyParser >>= \b ->
+   is '#'          >>= \_ ->
+   pure (d :. b)
+-}
+   do d <- digit
+      b <- phoneBodyParser
+      _ <- is '#'
+      pure (d :. b)
+{-
+  -- lift3 (\d b _ -> d :. b) digit phoneBodyParser (is '#')
+  (:.) <$> digit <*> phoneBodyParser <* is '#'
+-}
+
 
 -- | Write a parser for Person.
 --
@@ -676,10 +741,37 @@ phoneParser =
 --
 -- >>> parse personParser "123  Fred   Clarkson    y     123-456.789#"
 -- Result >< Person 123 "Fred" "Clarkson" True "123-456.789"
+
+-- * parse :: Parser a -> Input -> ParseResult a
 personParser ::
   Parser Person
 personParser =
-  error "todo: Course.Parser#personParser"
+{-
+  do a <- ageParser
+     _ <- spaces1
+     f <- firstNameParser
+     _ <- spaces1
+     s <- surnameParser
+     _ <- spaces1
+     b <- smokerParser
+     _ <- spaces1
+     p <- phoneParser
+     pure (Person a f s b p)
+-- also easier to translate from "pure ENGLISH representation" ~
+-- Pay attention that, 1. it is "space1" rather than "space"; 2. finally, using a "Person" constructor ~
+-}
+  \a f s b p -> Person a f s b p <$>
+     ageParser <*>
+     spaces1 <*>
+     firstNameParser <*>
+     spaces1 <*>
+     surnameParser <*>
+     spaces1 <*>
+     smokeParser <*>
+     spaces1 <*>
+     phoneParser <*>
+
+-- Can also consider similar "jasonValue" file ~ if want to get more exercises ...
 
 -- Make sure all the tests pass!
 
