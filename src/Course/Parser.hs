@@ -760,16 +760,12 @@ personParser =
 -- also easier to translate from "pure ENGLISH representation" ~
 -- Pay attention that, 1. it is "space1" rather than "space"; 2. finally, using a "Person" constructor ~
 -}
-  \a f s b p -> Person a f s b p <$>
-     ageParser <*>
-     spaces1 <*>
-     firstNameParser <*>
-     spaces1 <*>
-     surnameParser <*>
-     spaces1 <*>
-     smokeParser <*>
-     spaces1 <*>
-     phoneParser <*>
+   Person <$>
+     ageParser <*>~
+     firstNameParser <*>~
+     surnameParser <*>~
+     smokerParser <*>~
+     phoneParser
 
 -- Can also consider similar "jasonValue" file ~ if want to get more exercises ...
 
